@@ -1,0 +1,23 @@
+﻿@{
+    ViewBag.Title = "Đa luồng";
+    Layout = "~/Areas/AdminIT/Views/Shared/_LayoutAdmin.cshtml";
+}
+
+<h1>Xin chào đa luồng</h1>
+<ul>
+    <li>@ViewBag.Message</li>
+
+    @foreach (var str in ViewBag.Collection1)
+    {
+        @Html.Raw(str);
+        <br />
+    }
+    <h1>Bỏ qua</h1>
+   
+
+
+
+  
+</ul>
+
+ 

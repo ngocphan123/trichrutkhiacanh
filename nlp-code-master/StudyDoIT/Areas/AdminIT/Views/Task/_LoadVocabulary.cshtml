@@ -1,0 +1,40 @@
+﻿@model IEnumerable<StudyDoIT.Models.NLP.Vocabulary>
+@{
+    ViewBag.Title = "LoadVocabulary";
+    Layout = "~/Areas/AdminIT/Views/Shared/_LayoutAdmin.cshtml";
+}
+
+<h2>LoadVocabulary</h2>
+<h1>TIME: @ViewBag.Time</h1>
+<header class="panel-heading">
+    <div class="panel-actions">
+        <a href="#" class="panel-action panel-action-toggle" data-panel-toggle></a>
+    </div>
+    <h2 class="panel-title">Danh sách từ trong từ điển của sản phẩm</h2>   
+</header>
+<div class="panel-body">
+    <table class="table table-bordered table-striped mb-none" id="datatable-tabletools"
+           data-swf-path="/Areas/AdminIT/Content/vendor/jquery-datatables/extras/TableTools/swf/copy_csv_xls_pdf.swf">
+        <thead>
+            <tr>
+                <th>Từ khóa</th>
+                <th>Số lượng</th>
+                <th>Loại từ</th>
+                <th>Hành động</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Model)
+            {
+                <tr class="gradeX">
+                    <td>@Html.DisplayFor(modelItem => item.Word)</td>
+                    <td>@Html.DisplayFor(modelItem => item.Counts)</td>
+                    <td>@Html.DisplayFor(modelItem => item.TypeWord)</td>
+                    <td class="actions">
+                        @Html.ActionLink("Xóa", "Delete", new { id = item.Id })
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
