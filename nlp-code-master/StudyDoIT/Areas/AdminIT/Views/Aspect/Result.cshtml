@@ -11,7 +11,9 @@
         </div>
         <h2 class="panel-title">Kết quả trích rút khía cạnh</h2>
     </header>
-    <table>
+@if (Model != null)
+{
+    <table class="table table-bordered table-striped mb-none">
         <thead>
             <tr>
                 @foreach (DataColumn col in Model.Columns)
@@ -23,7 +25,7 @@
         <tbody>
             @foreach (DataRow row in Model.Rows)
             {
-                <tr>
+                <tr class="gradeX">
                     @foreach (DataColumn col in Model.Columns)
                     {
                         <td>@row[col.ColumnName]</td>
@@ -32,4 +34,5 @@
             }
         </tbody>
     </table>
+}
     </section>

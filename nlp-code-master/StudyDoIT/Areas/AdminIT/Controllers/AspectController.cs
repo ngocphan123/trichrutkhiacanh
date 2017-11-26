@@ -21,28 +21,29 @@ namespace StudyDoIT.Areas.AdminIT.Controllers
         {
             return View();
         }
+
         public ActionResult Create(FormCollection collection)
         {
             try
             {
-                FileStream fs = new FileStream("D:\\hoctap\\DoAnTotNghiep\\soucecode\\stopWord.txt", FileMode.Open);
-                StreamReader rd = new StreamReader(fs, Encoding.UTF8);
+                
                 string line = "";
-                Dictionary<string, string> stopword = new Dictionary<string, string>();
-                while ((line = rd.ReadLine()) != null)
-                {
-                    stopword.Add(line, line);
-                } 
                 string comment = collection["comment"];
                 ViewBag.Time = comment;
                 Dictionary<int, string> diccomment = new Dictionary<int, string>();
                 ViewData["Message"] = "Welcome to ASP.NET MVC!";
-
                 DataTable dt = new DataTable("MyTable");
-                dt.Columns.Add(new DataColumn("Col1", typeof(string)));
-                dt.Columns.Add(new DataColumn("Col2", typeof(string)));
-                dt.Columns.Add(new DataColumn("Col3", typeof(string)));
+                dt.Columns.Add(new DataColumn("sentent", typeof(string)));
+                dt.Columns.Add(new DataColumn("idaspect", typeof(string)));
+                dt.Columns.Add(new DataColumn("support", typeof(string)));
                 dt.Columns.Add(new DataColumn("core", typeof(string)));
+
+                DataTable datasentent = new DataTable();
+                datasentent.Columns.Add(new DataColumn("sentent", typeof(string)));
+                datasentent.Columns.Add(new DataColumn("idaspect", typeof(string)));
+                datasentent.Columns.Add(new DataColumn("support", typeof(string)));
+                datasentent.Columns.Add(new DataColumn("core", typeof(string)));
+                DataTable datatmp = new DataTable("Kết quả tạm");
                 /*List các khía cạnh của câu
                  */
                 
@@ -55,7 +56,8 @@ namespace StudyDoIT.Areas.AdminIT.Controllers
                  {
                      if (str[i].Trim() != "" && str[i].Length > 2)
                      {
-                         string str2 = str[i];
+                         
+                         string str2 = str[i];                 
                          int j = i + 1;
                          if (j < str.Length)
                          {
@@ -80,26 +82,27 @@ namespace StudyDoIT.Areas.AdminIT.Controllers
                          {
 
                          }
-   
+                         string strdata = str2;
                          //loại bỏ từ dừng
-                         str2 = str2.Replace("n't", " n't ");
+                         str2 = str2.Replace("n't", " not ");
                          str2 = str2.ToLower();
                          string[] result = str2.Split(' ');
                          line = "";
-                         foreach (KeyValuePair<string, string> kvp in stopword)
+                         var stopword = db.StopWords.ToList(); 
+                         foreach (var kvp in stopword)
                          {
 
-                             if (result[0] == kvp.Value)
+                             if (result[0] == kvp.StopWord1)
                              {
-                                 line = String.Concat(kvp.Value, " ");
+                                 line = String.Concat(kvp.StopWord1, " ");
                                  str2 = str2.Replace(line, " ");
                              }
-                             if (result[result.Length - 1] == kvp.Value)
+                             if (result[result.Length - 1] == kvp.StopWord1)
                              {
-                                 line = String.Concat(" ", kvp.Value);
+                                 line = String.Concat(" ", kvp.StopWord1);
                                  str2 = str2.Replace(line, " ");
                              }
-                             line = String.Concat(" ", kvp.Value);
+                             line = String.Concat(" ", kvp.StopWord1);
                              line = String.Concat(line, " ");
 
                              str2 = str2.Replace(line, " ");
@@ -110,7 +113,8 @@ namespace StudyDoIT.Areas.AdminIT.Controllers
                              double support = 0;
                              for (int w = 0; w < str1.Length; w++)
                              {
-                                 string tmp = str1[w].ToString();
+                                 string tmp = str1[w].ToString().Replace(",", "");
+                                 tmp = tmp.Replace(";", "");
                                  var vectorword = db.VectorWords.Where(e => e.word == tmp).ToList();
                                 
                                 //var arrvecw = vectorword.First();
@@ -134,20 +138,74 @@ namespace StudyDoIT.Areas.AdminIT.Controllers
                              ListSupport sp = new ListSupport(str2,list.idaspect,support);
 
                              dicSupport.Add(dem, sp);
-
                              DataRow row = dt.NewRow();
-                             row["Col1"] = str2;
-                             row["Col2"] = list.idaspect;
-                             row["Col3"] = support;
+                             row["sentent"] = strdata.Trim();
+                             row["idaspect"] = list.idaspect.Trim();
+                             row["support"] = support;
                              row["core"] = list.word;
                              dt.Rows.Add(row);
+                             
                              }                           
                         
                      }
                  }
-                 
-                 ViewBag.MyDictionary = dicSupport;
-                 return PartialView("Result", dt);
+                //hiển thị kết quả.              
+                 var listcore = db.CoreWords.ToList();
+                 for (int i = 0; i < str.Length; i++)
+                 {
+                     if (str[i].Trim() != "" && str[i].Length > 2)
+                     {
+                         string strtmp = str[i].Trim();
+                         int j = i + 1;
+                         if (j < str.Length)
+                         {
+                             while (str[j].Length <= 0)
+                             {
+                                 j++;
+                                 if (j >= str.Length) break;
+                             }
+                         }
+                         try
+                         {
+                             if (j < str.Length)
+                             {
+                                 if (!Char.IsUpper(str[j].Trim().ToCharArray()[0]))
+                                 {
+                                     strtmp += " " + str[j];
+                                     i = j;
+                                 }
+                             }
+                             foreach (var core in listcore)
+                             {
+                                 string id = core.id.Trim();
+                                 double sp = 0;
+                                 datatmp = dt.AsEnumerable()
+                                .Where(r => r.Field<string>("idaspect") == id && r.Field<string>("sentent") == strtmp.Trim())
+                                .CopyToDataTable();
+                                 int dtmp = 0;
+                                 foreach (DataRow row in datatmp.Rows)
+                                 {
+                                     sp += Convert.ToDouble(row.ItemArray[2]);
+                                     dtmp++;
+
+                                 }
+                                 DataRow rowsentent = datasentent.NewRow();
+                                 rowsentent["sentent"] = strtmp;
+                                 rowsentent["idaspect"] = core.aspect;
+                                 rowsentent["support"] = sp / dtmp;
+                                 rowsentent["core"] = core.core_word;
+                                 datasentent.Rows.Add(rowsentent);
+                             }
+                            
+                         }
+                         catch
+                         {
+
+                         }
+
+                     }
+                 }
+                 return PartialView("Result", datasentent);
             }
             catch
             {

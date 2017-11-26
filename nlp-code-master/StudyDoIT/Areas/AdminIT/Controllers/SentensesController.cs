@@ -65,8 +65,8 @@ namespace StudyDoIT.Areas.AdminIT.Controllers
         private void SplitComment(string idgc)
         {
 
-            FileStream fs = new FileStream("D:\\hoctap\\DoAnTotNghiep\\soucecode\\stopWord.txt", FileMode.Open);
-            StreamReader rd = new StreamReader(fs, Encoding.UTF8);
+         FileStream fs = new FileStream("D:\\hoctap\\DoAnTotNghiep\\soucecode\\stopWord.txt", FileMode.Open);
+         StreamReader rd = new StreamReader(fs, Encoding.UTF8);
             string line = "";
             Dictionary<string, string> stopword = new Dictionary<string, string>();
             while ((line = rd.ReadLine()) != null)
@@ -143,7 +143,7 @@ namespace StudyDoIT.Areas.AdminIT.Controllers
                                     db.SaveChanges();
 
                                     //loại bỏ từ dừng
-                                    str2 = str2.Replace("n't", " n't ");
+                                    str2 = str2.Replace("n't", " not ");
                                     str2 = str2.ToLower();
                                     string[] result = str2.Split(' ');
                                     line = "";
