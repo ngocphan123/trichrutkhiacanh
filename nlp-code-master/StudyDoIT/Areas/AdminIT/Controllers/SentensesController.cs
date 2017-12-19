@@ -3,10 +3,16 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Web;
 using System.Web.Mvc;
-using System.Data.Entity;
-using System.Data.Entity.Infrastructure;
+using edu.stanford.nlp.ling;
+using edu.stanford.nlp.tagger.maxent;
+using Console = System.Console;
+using java.util;
+using java.io;
 using StudyDoIT.Models.NLP;
 using StudyDoIT.Models.Common;
+using System.Data.Entity;
+using System.Text.RegularExpressions;
+using System.Diagnostics;
 using System.IO;
 using System.Text;
 
@@ -61,24 +67,131 @@ namespace StudyDoIT.Areas.AdminIT.Controllers
             var data = db.Sentenses.Where(e => e.Comment.GroupCommentId == idgc).ToList();
             return PartialView("_ListSentenses", data);
         }
+        private void standarsetenword()
+        {
+            var stopword = db.StopWords.ToList();
+            Dictionary<string, string> dicstopword = new Dictionary<string, string>();
+            foreach (var kvp in stopword)
+            {
+                dicstopword.Add(kvp.StopWord1, kvp.StopWord1);
+            }
 
+            var listcore = db.CoreWords.ToList();
+            Dictionary<string, string> diccore = new Dictionary<string, string>();
+            foreach (var kvp in listcore)
+            {
+                //diccore.Add(kvp.core_word, kvp.core_word);
+                string[] strcore = kvp.core_word.Split(',');
+                foreach (var s in strcore)
+                {
+                    diccore.Add(s, s);
+                }
+            }
+            string urlRoot = System.IO.Path.Combine(Server.MapPath("~/Uploads/english-left3words"), "english-left3words-distsim.tagger");
+            var tagger = new MaxentTagger(urlRoot);
+            var sen2 = db.Sentenses.ToList();
+            if (sen2.Count >= 1)
+            {
+
+                var cm = sen2;
+
+                //try
+                //{
+                if (cm.Count > 1)
+                {
+                    foreach (var item in cm)
+                    {
+                        var text = item.ContentReview;
+                        //string str = "";
+                        var sentences = MaxentTagger.tokenizeText(new java.io.StringReader(text)).toArray();
+                        foreach (ArrayList sentence in sentences)
+                        {
+                            string strse = sentence.toString();
+                            strse = strse.Replace(",", "");
+                            strse = strse.Replace("[", "");
+                            strse = strse.Replace("]", "");
+                            string ids = item.Id;
+
+                            var taggedSentence = tagger.tagSentence(sentence);
+                            string[] str1 = taggedSentence.ToString().Split(',', '[', ']');
+                            string strtmp = "";
+                            foreach (var item2 in str1)
+                            {
+                                string linei = "";
+                                if (item2.Trim() != "")
+                                {
+                                    string[] str2 = item2.ToString().Split('/');
+                                    try
+                                    {
+                                        if(str2.Count()==2 && str2[1].Trim() != "")
+                                        {
+                                            if ((str2[1].Trim() != "NN"
+                                                && !diccore.TryGetValue(str2[0].Trim().ToLower(), out linei)
+                                                && str2[1].Trim() != "NNP" && str2[1].Trim() != "NNS") || dicstopword.TryGetValue(str2[0].Trim().ToLower(), out linei))
+                                            {
+                                                continue;
+                                            }
+                                            else
+                                            {
+                                                strtmp += " " + str2[0].Trim().ToLower();
+                                            }                                      
+                                        }
+                                   
+                                    }
+                                    catch { }
+                                }
+                            }
+
+                            Sentensesnotword senotopword = new Sentensesnotword();
+                           /* while (db.Sentensesnotwords.Where(e => e.Id == ids).Count() > 0)
+                            {
+                                ids = Public.GetID();
+                            }*/
+                            if (strtmp.Trim() != "" && db.Sentensesnotwords.Where(e => e.Id == ids).Count() == 0)
+                            {
+                                senotopword.Id = ids;
+                                senotopword.ContentReview = strtmp.Trim();
+                                senotopword.CommentId = item.CommentId;
+                                db.Sentensesnotwords.Add(senotopword);
+                                db.SaveChanges();
+                            }
+                           
+                        }
+                    }
+                }
+                //}
+                //catch { }
+          
+        }
+      }
+        [HttpPost]
+        public ActionResult SplitSentenses(FormCollection collection)
+        {
+            string idp = collection["ProductId"];
+            //var cat = db.Categories.ToList();
+            //var cm = db.Comments.ToList();
+            var p = db.GroupComents.Where(e => e.ProductId == idp).ToList();
+            foreach (var pp in p)
+            {
+                //try
+                //{
+
+               //SplitComment(pp.Id);
+                
+                //}
+                //catch { }
+            }
+            standarsetenword();
+            var data = db.Sentenses.ToList();
+            return PartialView("_ListSentenses", data);
+        }
         private void SplitComment(string idgc)
         {
-
-         FileStream fs = new FileStream("D:\\hoctap\\DoAnTotNghiep\\soucecode\\stopWord.txt", FileMode.Open);
-         StreamReader rd = new StreamReader(fs, Encoding.UTF8);
-            string line = "";
-            Dictionary<string, string> stopword = new Dictionary<string, string>();
-            while ((line = rd.ReadLine()) != null)
-            {
-                stopword.Add(line, line);
-            } 
-
             var sen2 = db.Sentenses.Where(e => e.Comment.GroupCommentId == idgc).ToList();
             if (sen2.Count <= 0)
             {
                 var cm = db.Comments.Where(e => e.GroupCommentId == idgc).ToList();
-                
+
                 //try
                 //{
                 if (cm.Count > 1)
@@ -86,17 +199,17 @@ namespace StudyDoIT.Areas.AdminIT.Controllers
                     foreach (var item in cm)
                     {
                         //Tiền xử lý
-                //string[] str = item.Comment1.Split('...');
+                        //string[] str = item.Comment1.Split('...');
                         //try
                         //{
                         var sen = db.Sentenses.Where(e => e.CommentId == item.Id).ToList();
                         if (sen.Count <= 0)
                         {
-           // string strtest = "Not too heavy, definately not watery. Not very good at describing it other than it's good.";
+                            // string strtest = "Not too heavy, definately not watery. Not very good at describing it other than it's good.";
                             string[] str = item.Comment1.Split('.', '!', '?');
-                        //string[] str = item.Split('.', '!', '?');
+                            //string[] str = item.Split('.', '!', '?');
 
-                            for(int i=0;i < str.Length; i++)
+                            for (int i = 0; i < str.Length; i++)
                             {
                                 //try
                                 //{
@@ -113,9 +226,9 @@ namespace StudyDoIT.Areas.AdminIT.Controllers
                                         }
                                     }
                                     //char s = str[j].Trim().ToCharArray()[0];
-                                    try
+                                    if (j < str.Length)
                                     {
-                                        if (j < str.Length)
+                                        try
                                         {
                                             if (!Char.IsUpper(str[j].Trim().ToCharArray()[0]))
                                             {
@@ -123,18 +236,16 @@ namespace StudyDoIT.Areas.AdminIT.Controllers
                                                 i = j;
                                             }
                                         }
-                                    }
-                                    catch
-                                    {
+                                        catch{
 
+                                        }
+                                        
                                     }
-                                    
                                     string ids = Public.GetID();
                                     while (db.Sentenses.Where(e => e.Id == ids).Count() > 0)
                                     {
                                         ids = Public.GetID();
                                     }
-
                                     Sentens se = new Sentens();
                                     se.Id = ids;
                                     se.ContentReview = str2.Trim();
@@ -142,42 +253,11 @@ namespace StudyDoIT.Areas.AdminIT.Controllers
                                     db.Sentenses.Add(se);
                                     db.SaveChanges();
 
-                                    //loại bỏ từ dừng
-                                    str2 = str2.Replace("n't", " not ");
-                                    str2 = str2.ToLower();
-                                    string[] result = str2.Split(' ');
-                                    line = "";
-                                    foreach (KeyValuePair<string, string> kvp in stopword)
-                                    {
-
-                                        if (result[0] == kvp.Value)
-                                        {
-                                            line = String.Concat(kvp.Value, " ");
-                                            str2 = str2.Replace(line, " ");
-                                        }
-                                        if (result[result.Length - 1] == kvp.Value)
-                                        {
-                                            line = String.Concat(" ", kvp.Value);
-                                            str2 = str2.Replace(line, " ");
-                                        }
-                                        line = String.Concat(" ", kvp.Value);
-                                        line = String.Concat(line, " ");
-                                        
-                                        str2 = str2.Replace(line, " ");
-                                    }
-
-                                    Sentensesnotword senotopword = new Sentensesnotword();
-                                    senotopword.Id = ids;
-                                    senotopword.ContentReview = str2.Trim();
-                                    senotopword.CommentId = item.Id;
-                                    db.Sentensesnotwords.Add(senotopword);
-                                    db.SaveChanges();
-
                                 }
                                 //}
                                 //catch { }
                             }
-                            }
+                        }
                         //}
                         //catch { }
                     }
@@ -185,26 +265,6 @@ namespace StudyDoIT.Areas.AdminIT.Controllers
                 //}
                 //catch { }
             }
-        }
-
-        [HttpPost]
-        public ActionResult SplitSentenses(FormCollection collection)
-        {
-            string idp = collection["ProductId"];
-            //var cat = db.Categories.ToList();
-            //var cm = db.Comments.ToList();
-            var p = db.GroupComents.Where(e => e.ProductId == idp).ToList();
-            foreach (var pp in p)
-            {
-                //try
-                //{
-                    
-                    SplitComment(pp.Id);
-                //}
-                //catch { }
-            }
-            var data = db.Sentenses.ToList();
-            return PartialView("_ListSentenses", data);
         }
 
         public ActionResult Delete(string id)
